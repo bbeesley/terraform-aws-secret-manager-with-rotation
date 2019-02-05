@@ -6,8 +6,13 @@ data "aws_subnet" "firstsub" {
   id = "${var.subnets_lambda[0]}"
 }
 
+locals {
+  role_name = "${var.name}-rotation_lambda"
+  role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.role_name}"
+}
+
 resource "aws_iam_role" "lambda_rotation" {
-  name = "${var.name}-rotation_lambda"
+  name = "${local.role_name}"
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -190,7 +195,7 @@ resource "aws_kms_key" "secret" {
       "Effect": "Allow",
       "Principal": {
         "AWS": [
-          "${aws_iam_role.lambda_rotation.arn}"
+          "${local.role_arn}"
         ]
       },
       "Action": [
@@ -207,7 +212,7 @@ resource "aws_kms_key" "secret" {
       "Effect": "Allow",
       "Principal": {
         "AWS": [
-          "${aws_iam_role.lambda_rotation.arn}"
+          "${local.role_arn}"
         ]
       },
       "Action": [
