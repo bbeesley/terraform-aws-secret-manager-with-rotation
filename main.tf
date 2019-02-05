@@ -1,7 +1,10 @@
 data "aws_partition" "current" {}
 data "aws_region" "current" {}
 data "aws_caller_identity" "current" {}
-data "aws_subnet" "firstsub" {  id = "${var.subnets_lambda[0]}" }
+data "aws_subnet" "firstsub" {
+  count = "${length(var.subnets_lambda) == "0" ? 0 : 1}"
+  id = "${var.subnets_lambda[0]}"
+}
 
 resource "aws_iam_role" "lambda_rotation" {
   name = "${var.name}-rotation_lambda"
@@ -69,11 +72,10 @@ resource "aws_iam_policy_attachment" "SecretsManagerRDSPostgreSQLRotationSingleU
 }
 
 resource "aws_security_group" "lambda" {
+    count = "${length(var.subnets_lambda) == "0" ? 0 : 1}"
     vpc_id = "${data.aws_subnet.firstsub.vpc_id}"
     name = "${var.name}-Lambda-SecretManager"
-    tags {
-        Name  = "${var.name}-Lambda-SecretManager"
-    }
+    tags = "${var.tags}"
     egress {
         from_port       = 0
         to_port         = 0
@@ -92,7 +94,7 @@ resource "aws_lambda_function" "rotate-code-postgres" {
   runtime            = "python2.7"
   vpc_config {
     subnet_ids         = ["${var.subnets_lambda}"]
-    security_group_ids = ["${aws_security_group.lambda.id}"]
+    security_group_ids = ["${length(var.subnets_lambda) == "0" ? "" : aws_security_group.lambda.id}"]
   }
   timeout            = 30
   description        = "Conducts an AWS SecretsManager secret rotation for RDS PostgreSQL using single user rotation scheme"
@@ -238,7 +240,7 @@ resource "aws_secretsmanager_secret" "secret" {
   rotation_rules {
     automatically_after_days = "${var.rotation_days}"
   }
-  #tags                = "${var.tags}"
+  tags                = "${var.tags}"
   #policy =
 }
 

@@ -32,6 +32,11 @@ variable "postgres_port" {
 variable "postgres_dbInstanceIdentifier" {
   description = "The RDS Identifier in the webconsole"
 }
+variable "tags" {
+  type        = "map"
+  default     = {}
+  description = "Info tags to be applied to infrastructure we create"
+}
 /* Not yet available 
 variable "additional_kms_role_arn" {
   type = "list"
