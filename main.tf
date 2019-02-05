@@ -245,7 +245,7 @@ resource "aws_secretsmanager_secret" "secret" {
   description         = "${var.secret_description}"
   kms_key_id          = "${aws_kms_key.secret.key_id}"
   name                = "${var.name}"
-  rotation_lambda_arn = "${aws_lambda_function.rotate-code-postgres.arn}"
+  rotation_lambda_arn = "${aws_lambda_function.rotate-code-postgres.arn}:$LATEST"
   rotation_rules {
     automatically_after_days = "${var.rotation_days}"
   }
