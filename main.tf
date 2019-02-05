@@ -94,7 +94,7 @@ resource "aws_lambda_function" "rotate-code-postgres" {
   runtime            = "python2.7"
   vpc_config {
     subnet_ids         = ["${var.subnets_lambda}"]
-    security_group_ids = ["${length(var.subnets_lambda) == "0" ? "" : aws_security_group.lambda.id}"]
+    security_group_ids = ["${local.groups}"]
   }
   timeout            = 30
   description        = "Conducts an AWS SecretsManager secret rotation for RDS PostgreSQL using single user rotation scheme"
@@ -103,6 +103,10 @@ resource "aws_lambda_function" "rotate-code-postgres" {
       SECRETS_MANAGER_ENDPOINT = "https://secretsmanager.${data.aws_region.current.name}.amazonaws.com"
     }
   }
+}
+
+locals {
+    groups = ["${length(var.subnets_lambda) == "0" ? "" : join(",", aws_security_group.lambda.*.id)}"]
 }
 
 resource "aws_lambda_permission" "allow_secret_manager_call_Lambda" {
