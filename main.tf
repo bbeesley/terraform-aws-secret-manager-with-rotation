@@ -1,13 +1,15 @@
 data "aws_partition" "current" {}
 data "aws_region" "current" {}
 data "aws_caller_identity" "current" {}
+
 data "aws_subnet" "firstsub" {
   count = "${length(var.subnets_lambda) == "0" ? 0 : 1}"
-  id = "${var.subnets_lambda[0]}"
+  id    = "${var.subnets_lambda[0]}"
 }
 
 resource "aws_iam_role" "lambda_rotation" {
   name = "${var.name}-rotation_lambda"
+
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -39,8 +41,10 @@ data "aws_iam_policy_document" "SecretsManagerRDSPostgreSQLRotationSingleUserRol
       "ec2:DescribeNetworkInterfaces",
       "ec2:DetachNetworkInterface",
     ]
-    resources = [ "*",]
+
+    resources = ["*"]
   }
+
   statement {
     actions = [
       "secretsmanager:DescribeSecret",
@@ -48,13 +52,15 @@ data "aws_iam_policy_document" "SecretsManagerRDSPostgreSQLRotationSingleUserRol
       "secretsmanager:PutSecretValue",
       "secretsmanager:UpdateSecretVersionStage",
     ]
+
     resources = [
       "arn:${data.aws_partition.current.partition}:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:*",
     ]
   }
+
   statement {
-    actions = ["secretsmanager:GetRandomPassword"]
-    resources = ["*",]
+    actions   = ["secretsmanager:GetRandomPassword"]
+    resources = ["*"]
   }
 }
 
@@ -64,7 +70,6 @@ resource "aws_iam_policy" "SecretsManagerRDSPostgreSQLRotationSingleUserRolePoli
   policy = "${data.aws_iam_policy_document.SecretsManagerRDSPostgreSQLRotationSingleUserRolePolicy.json}"
 }
 
-
 resource "aws_iam_policy_attachment" "SecretsManagerRDSPostgreSQLRotationSingleUserRolePolicy" {
   name       = "${var.name}-SecretsManagerRDSPostgreSQLRotationSingleUserRolePolicy"
   roles      = ["${aws_iam_role.lambda_rotation.name}"]
@@ -72,45 +77,81 @@ resource "aws_iam_policy_attachment" "SecretsManagerRDSPostgreSQLRotationSingleU
 }
 
 resource "aws_security_group" "lambda" {
-    count = "${length(var.subnets_lambda) == "0" ? 0 : 1}"
-    vpc_id = "${data.aws_subnet.firstsub.vpc_id}"
-    name = "${var.name}-Lambda-SecretManager"
-    tags = "${var.tags}"
-    egress {
-        from_port       = 0
-        to_port         = 0
-        protocol        = "-1"
-        cidr_blocks     = ["0.0.0.0/0"]
+  count  = "${length(var.subnets_lambda) == "0" ? 0 : 1}"
+  vpc_id = "${data.aws_subnet.firstsub.vpc_id}"
+  name   = "${var.name}-Lambda-SecretManager"
+  tags   = "${var.tags}"
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
-variable "filename" { default = "rotate-code-postgres"}
-resource "aws_lambda_function" "rotate-code-postgres" {
-  filename           = "${path.module}/${var.filename}.zip"
-  function_name      = "${var.name}-${var.filename}"
-  role               = "${aws_iam_role.lambda_rotation.arn}"
-  handler            = "lambda_function.lambda_handler"
-  source_code_hash   = "${base64sha256(file("${path.module}/${var.filename}.zip"))}"
-  runtime            = "python2.7"
+variable "filename" {
+  default = "rotate-code-postgres"
+}
+
+resource "aws_lambda_function" "rotate-code-postgres-vpc" {
+  count  = "${length(var.subnets_lambda) == "0" ? 0 : 1}"
+  filename         = "${path.module}/${var.filename}.zip"
+  function_name    = "${var.name}-${var.filename}"
+  role             = "${aws_iam_role.lambda_rotation.arn}"
+  handler          = "lambda_function.lambda_handler"
+  source_code_hash = "${base64sha256(file("${path.module}/${var.filename}.zip"))}"
+  runtime          = "python2.7"
+
   vpc_config {
     subnet_ids         = ["${var.subnets_lambda}"]
-    security_group_ids = ["${length(var.subnets_lambda) == "0" ? "" : aws_security_group.lambda.id}"]
+    security_group_ids = ["${aws_security_group.lambda.id}"]
   }
-  timeout            = 30
-  description        = "Conducts an AWS SecretsManager secret rotation for RDS PostgreSQL using single user rotation scheme"
+
+  timeout     = 30
+  description = "Conducts an AWS SecretsManager secret rotation for RDS PostgreSQL using single user rotation scheme"
+
   environment {
-    variables = { #https://docs.aws.amazon.com/general/latest/gr/rande.html#asm_region
-      SECRETS_MANAGER_ENDPOINT = "https://secretsmanager.${data.aws_region.current.name}.amazonaws.com"
+    variables = {
+      SECRETS_MANAGER_ENDPOINT = "https://secretsmanager.${data.aws_region.current.name}.amazonaws.com" #https://docs.aws.amazon.com/general/latest/gr/rande.html#asm_region
     }
   }
 }
 
-resource "aws_lambda_permission" "allow_secret_manager_call_Lambda" {
-    function_name = "${aws_lambda_function.rotate-code-postgres.function_name}"
-    statement_id = "AllowExecutionSecretManager"
-    action = "lambda:InvokeFunction"
-    principal = "secretsmanager.amazonaws.com"
+resource "aws_lambda_function" "rotate-code-postgres-public" {
+  count  = "${length(var.subnets_lambda) == "0" ? 1 : 0}"
+  filename         = "${path.module}/${var.filename}.zip"
+  function_name    = "${var.name}-${var.filename}"
+  role             = "${aws_iam_role.lambda_rotation.arn}"
+  handler          = "lambda_function.lambda_handler"
+  source_code_hash = "${base64sha256(file("${path.module}/${var.filename}.zip"))}"
+  runtime          = "python2.7"
+
+  timeout     = 30
+  description = "Conducts an AWS SecretsManager secret rotation for RDS PostgreSQL using single user rotation scheme"
+
+  environment {
+    variables = {
+      SECRETS_MANAGER_ENDPOINT = "https://secretsmanager.${data.aws_region.current.name}.amazonaws.com" #https://docs.aws.amazon.com/general/latest/gr/rande.html#asm_region
+    }
+  }
 }
+
+locals {
+  # sg_ids                       = ["${length(var.subnets_lambda) == "0" ? "" : local.aws_security_group_lambda_id}"]
+  # aws_security_group_lambda_id = "${split(",", (join(",", aws_security_group.lambda.id, 0)) == "0" ? "" : aws_security_group.lambda.id)}"
+  rotate_lambda_function_name = "${join("", aws_lambda_function.rotate-code-postgres-vpc.*.function_name, aws_lambda_function.rotate-code-postgres-public.*.function_name)}"
+  rotate_lambda_arn = "${join("", aws_lambda_function.rotate-code-postgres-vpc.*.arn, aws_lambda_function.rotate-code-postgres-public.*.arn)}"
+
+}
+
+resource "aws_lambda_permission" "allow_secret_manager_call_Lambda" {
+  function_name = "${local.rotate_lambda_function_name}"
+  statement_id  = "AllowExecutionSecretManager"
+  action        = "lambda:InvokeFunction"
+  principal     = "secretsmanager.amazonaws.com"
+}
+
 /* not yet available
 data "aws_iam_policy_document" "kms" {
   statement {
@@ -164,6 +205,7 @@ data "aws_iam_policy_document" "kms" {
 resource "aws_kms_key" "secret" {
   description         = "Key for secret ${var.name}"
   enable_key_rotation = true
+
   #policy              = "${data.aws_iam_policy_document.kms.json}"
   policy = <<POLICY
 {
@@ -223,34 +265,35 @@ resource "aws_kms_key" "secret" {
 POLICY
 }
 
-
-
 resource "aws_kms_alias" "secret" {
   name          = "alias/${var.name}"
   target_key_id = "${aws_kms_key.secret.key_id}"
 }
 
-
-
 resource "aws_secretsmanager_secret" "secret" {
   description         = "${var.secret_description}"
   kms_key_id          = "${aws_kms_key.secret.key_id}"
   name                = "${var.name}"
-  rotation_lambda_arn = "${aws_lambda_function.rotate-code-postgres.arn}"
+  rotation_lambda_arn = "${local.rotate_lambda_arn}"
+
   rotation_rules {
     automatically_after_days = "${var.rotation_days}"
   }
-  tags                = "${var.tags}"
+
+  tags = "${var.tags}"
+
   #policy =
 }
 
 resource "aws_secretsmanager_secret_version" "secret" {
   lifecycle {
     ignore_changes = [
-      "secret_string"
+      "secret_string",
     ]
   }
-  secret_id     = "${aws_secretsmanager_secret.secret.id}"
+
+  secret_id = "${aws_secretsmanager_secret.secret.id}"
+
   secret_string = <<EOF
 {
   "username": "${var.postgres_username}",
