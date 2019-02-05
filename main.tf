@@ -91,7 +91,7 @@ resource "aws_lambda_function" "rotate-code-postgres" {
   source_code_hash   = "${base64sha256(file("${path.module}/${var.filename}.zip"))}"
   runtime            = "python2.7"
   vpc_config {
-    subnet_ids         = "${var.subnets_lambda}"
+    subnet_ids         = ["${var.subnets_lambda}"]
     security_group_ids = ["${aws_security_group.lambda.id}"]
   }
   timeout            = 30
