@@ -171,6 +171,10 @@ data "aws_iam_policy_document" "kms" {
 */
 
 resource "aws_kms_key" "secret" {
+  depends_on          = [
+    "aws_lambda_function.rotate-code-postgres",
+    "aws_lambda_permission.allow_secret_manager_call_Lambda"
+  ]
   description         = "Key for secret ${var.name}"
   enable_key_rotation = true
   #policy              = "${data.aws_iam_policy_document.kms.json}"
