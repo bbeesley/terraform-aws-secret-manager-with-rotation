@@ -28,7 +28,7 @@ resource "aws_iam_policy_attachment" "lambdabasic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-data "aws_iam_policy_document" "SecretsManagerRDSMySQLRotationSingleUserRolePolicy" {
+data "aws_iam_policy_document" "SecretsManagerRDSPostgreSQLRotationSingleUserRolePolicy" {
   statement {
     actions = [
       "ec2:CreateNetworkInterface",
@@ -55,17 +55,17 @@ data "aws_iam_policy_document" "SecretsManagerRDSMySQLRotationSingleUserRolePoli
   }
 }
 
-resource "aws_iam_policy" "SecretsManagerRDSMySQLRotationSingleUserRolePolicy" {
-  name   = "${var.name}-SecretsManagerRDSMySQLRotationSingleUserRolePolicy"
+resource "aws_iam_policy" "SecretsManagerRDSPostgreSQLRotationSingleUserRolePolicy" {
+  name   = "${var.name}-SecretsManagerRDSPostgreSQLRotationSingleUserRolePolicy"
   path   = "/"
-  policy = "${data.aws_iam_policy_document.SecretsManagerRDSMySQLRotationSingleUserRolePolicy.json}"
+  policy = "${data.aws_iam_policy_document.SecretsManagerRDSPostgreSQLRotationSingleUserRolePolicy.json}"
 }
 
 
-resource "aws_iam_policy_attachment" "SecretsManagerRDSMySQLRotationSingleUserRolePolicy" {
-  name       = "${var.name}-SecretsManagerRDSMySQLRotationSingleUserRolePolicy"
+resource "aws_iam_policy_attachment" "SecretsManagerRDSPostgreSQLRotationSingleUserRolePolicy" {
+  name       = "${var.name}-SecretsManagerRDSPostgreSQLRotationSingleUserRolePolicy"
   roles      = ["${aws_iam_role.lambda_rotation.name}"]
-  policy_arn = "${aws_iam_policy.SecretsManagerRDSMySQLRotationSingleUserRolePolicy.arn}"
+  policy_arn = "${aws_iam_policy.SecretsManagerRDSPostgreSQLRotationSingleUserRolePolicy.arn}"
 }
 
 resource "aws_security_group" "lambda" {
@@ -82,8 +82,8 @@ resource "aws_security_group" "lambda" {
   }
 }
 
-variable "filename" { default = "rotate-code-mysql"}
-resource "aws_lambda_function" "rotate-code-mysql" {
+variable "filename" { default = "rotate-code-postgres"}
+resource "aws_lambda_function" "rotate-code-postgres" {
   filename           = "${path.module}/${var.filename}.zip"
   function_name      = "${var.name}-${var.filename}"
   role               = "${aws_iam_role.lambda_rotation.arn}"
@@ -95,7 +95,7 @@ resource "aws_lambda_function" "rotate-code-mysql" {
     security_group_ids = ["${aws_security_group.lambda.id}"]
   }
   timeout            = 30
-  description        = "Conducts an AWS SecretsManager secret rotation for RDS MySQL using single user rotation scheme"
+  description        = "Conducts an AWS SecretsManager secret rotation for RDS PostgreSQL using single user rotation scheme"
   environment {
     variables = { #https://docs.aws.amazon.com/general/latest/gr/rande.html#asm_region
       SECRETS_MANAGER_ENDPOINT = "https://secretsmanager.${data.aws_region.current.name}.amazonaws.com"
@@ -104,7 +104,7 @@ resource "aws_lambda_function" "rotate-code-mysql" {
 }
 
 resource "aws_lambda_permission" "allow_secret_manager_call_Lambda" {
-    function_name = "${aws_lambda_function.rotate-code-mysql.function_name}"
+    function_name = "${aws_lambda_function.rotate-code-postgres.function_name}"
     statement_id = "AllowExecutionSecretManager"
     action = "lambda:InvokeFunction"
     principal = "secretsmanager.amazonaws.com"
@@ -234,7 +234,7 @@ resource "aws_secretsmanager_secret" "secret" {
   description         = "${var.secret_description}"
   kms_key_id          = "${aws_kms_key.secret.key_id}"
   name                = "${var.name}"
-  rotation_lambda_arn = "${aws_lambda_function.rotate-code-mysql.arn}"
+  rotation_lambda_arn = "${aws_lambda_function.rotate-code-postgres.arn}"
   rotation_rules {
     automatically_after_days = "${var.rotation_days}"
   }
@@ -251,13 +251,13 @@ resource "aws_secretsmanager_secret_version" "secret" {
   secret_id     = "${aws_secretsmanager_secret.secret.id}"
   secret_string = <<EOF
 {
-  "username": "${var.mysql_username}",
-  "engine": "mysql",
-  "dbname": "${var.mysql_dbname}",
-  "host": "${var.mysql_host}",
-  "password": "${var.mysql_password}",
-  "port": ${var.mysql_port},
-  "dbInstanceIdentifier": "${var.mysql_dbInstanceIdentifier}"
+  "username": "${var.postgres_username}",
+  "engine": "postgres",
+  "dbname": "${var.postgres_dbname}",
+  "host": "${var.postgres_host}",
+  "password": "${var.postgres_password}",
+  "port": ${var.postgres_port},
+  "dbInstanceIdentifier": "${var.postgres_dbInstanceIdentifier}"
 }
 EOF
 }

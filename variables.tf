@@ -3,7 +3,7 @@ variable "name" {
 }
 variable "secret_description" {
   description = "This field is the description for the secret manager object"
-  default     = "secret manager for mysql/aurora"
+  default     = "secret manager for postgres/aurora"
 }
 variable "rotation_days" {
   default     = 30
@@ -13,23 +13,23 @@ variable "subnets_lambda" {
   type = "list"
   description = "The subnets where the Lambda Function will be run"
 }
-variable "mysql_username" {
-  description = "The MySQL/Aurora username you chose during RDS creation or another one that you want to rotate"
+variable "postgres_username" {
+  description = "The PostgreSQL/Aurora username you chose during RDS creation or another one that you want to rotate"
 }
-variable "mysql_dbname" {
+variable "postgres_dbname" {
   description = "The Database name inside your RDS"
 }
-variable "mysql_host" {
+variable "postgres_host" {
   description = "The RDS endpoint to connect to your database"
 }
-variable "mysql_password" {
+variable "postgres_password" {
   description = "The password that you want to rotate, this will be changed after the creation"
 }
-variable "mysql_port" {
-  default = 3306
-  description = "In case you don't have your MySQL on default port and you need to change it"
+variable "postgres_port" {
+  default = 5432
+  description = "In case you don't have your PostgreSQL on default port and you need to change it"
 }
-variable "mysql_dbInstanceIdentifier" {
+variable "postgres_dbInstanceIdentifier" {
   description = "The RDS Identifier in the webconsole"
 }
 /* Not yet available 
