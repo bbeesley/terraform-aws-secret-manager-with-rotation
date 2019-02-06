@@ -1,9 +1,5 @@
 This module will create all the resources to store and rotate a PostgreSQL or Aurora password using the AWS Secrets Manager service.
 
-# Schema
-
-![schema](https://raw.githubusercontent.com/giuseppeborgese/terraform-aws-secret-manager-with-rotation/master/schema.jpg)
-
 # Prerequisites
 * A VPC with private subnets and accessibilty to AWS Secrets Manager Endpoint, see below for more details.
 * An RDS with PostgreSQL or Aurora already created and reacheable from the private subnets
@@ -16,7 +12,7 @@ module "secret-manager-with-rotation" {
   version                    = "<always choose the latest version displayed in the upper right corner of this page>"
   name                       = "PassRotation"
   rotation_days              = 10
-  subnets_lambda             = ["subnet-xxxxxx", "subnet-xxxxxx"]
+  subnets_lambda             = ["subnet-xxxxxx", "subnet-xxxxxx"] # or [] for no vpc
   postgres_username             = "giuseppe"
   postgres_dbname               = "my_db_name"
   postgres_host                 =  "postgresEndpointurl.xxxxxx.us-east-1.rds.amazonaws.com"
@@ -24,12 +20,6 @@ module "secret-manager-with-rotation" {
   postgres_dbInstanceIdentifier = "my_rds_db_identifier"
 }
 ```
-
-### Video Tutorial
-Take a look to the video to see the module in action
-
-
-[![Rotate automatically a PostgreSQL or Aurora password using AWS Secrets Manager and Terraform](https://img.youtube.com/vi/ljZ6BZJabUk/0.jpg)](https://youtu.be/ljZ6BZJabUk)
 
 
 The subnets specified needs to be private and with internet access to reach the [AWS secrets manager endpoint](https://docs.aws.amazon.com/general/latest/gr/rande.html#asm_region)

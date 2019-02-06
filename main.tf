@@ -1,7 +1,10 @@
 data "aws_partition" "current" {}
 data "aws_region" "current" {}
 data "aws_caller_identity" "current" {}
-data "aws_subnet" "firstsub" {  id = "${var.subnets_lambda[0]}" }
+data "aws_subnet" "firstsub" {
+  count = "${length(var.subnets_lambda) == "0" ? 0 : 1}"
+  id = "${var.subnets_lambda[0]}"
+}
 
 resource "aws_iam_role" "lambda_rotation" {
   name = "${var.name}-rotation_lambda"
@@ -69,6 +72,7 @@ resource "aws_iam_policy_attachment" "SecretsManagerRDSPostgreSQLRotationSingleU
 }
 
 resource "aws_security_group" "lambda" {
+    count = "${length(var.subnets_lambda) == "0" ? 0 : 1}"
     vpc_id = "${data.aws_subnet.firstsub.vpc_id}"
     name = "${var.name}-Lambda-SecretManager"
     tags {
@@ -83,6 +87,11 @@ resource "aws_security_group" "lambda" {
 }
 
 variable "filename" { default = "rotate-code-postgres"}
+
+locals {
+  security_group_ids = ["${length(var.subnets_lambda) == "0" ? var.subnets_lambda : aws_security_group.lambda.*.id}"]
+}
+
 resource "aws_lambda_function" "rotate-code-postgres" {
   filename           = "${path.module}/${var.filename}.zip"
   function_name      = "${var.name}-${var.filename}"
@@ -90,10 +99,10 @@ resource "aws_lambda_function" "rotate-code-postgres" {
   handler            = "lambda_function.lambda_handler"
   source_code_hash   = "${base64sha256(file("${path.module}/${var.filename}.zip"))}"
   runtime            = "python2.7"
-  # vpc_config {
-  #   subnet_ids         = ["${var.subnets_lambda}"]
-  #   security_group_ids = ["${aws_security_group.lambda.id}"]
-  # }
+  vpc_config {
+    subnet_ids         = ["${var.subnets_lambda}"]
+    security_group_ids = ["${local.security_group_ids}"]
+  }
   timeout            = 30
   description        = "Conducts an AWS SecretsManager secret rotation for RDS PostgreSQL using single user rotation scheme"
   environment {
@@ -101,6 +110,7 @@ resource "aws_lambda_function" "rotate-code-postgres" {
       SECRETS_MANAGER_ENDPOINT = "https://secretsmanager.${data.aws_region.current.name}.amazonaws.com"
     }
   }
+  tags              = "${var.tags}"
 }
 
 resource "aws_lambda_permission" "allow_secret_manager_call_Lambda" {
