@@ -89,7 +89,7 @@ resource "aws_security_group" "lambda" {
 variable "filename" { default = "rotate-code-postgres"}
 
 locals {
-  security_group_ids = ["${length(var.subnets_lambda) == "0" ? var.subnets_lambda : aws_security_group.lambda.*.id}"]
+  security_group_ids = ["${split(",", length(var.subnets_lambda) == "0" ? join(",", var.subnets_lambda) : join(",", aws_security_group.lambda.*.id))}"]
 }
 
 resource "aws_lambda_function" "rotate-code-postgres" {
