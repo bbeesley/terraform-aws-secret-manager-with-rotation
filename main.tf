@@ -252,6 +252,18 @@ resource "aws_secretsmanager_secret" "secret" {
   #policy =
 }
 
+locals {
+  secret_string = {
+    username = "${var.postgres_username}"
+    engine = "postgres"
+    dbname = "${var.postgres_dbname}"
+    host = "${var.postgres_host}"
+    password = "${var.postgres_password}"
+    port = "${var.postgres_port}"
+    dbInstanceIdentifier = "${var.postgres_dbInstanceIdentifier}"
+  }
+}
+
 resource "aws_secretsmanager_secret_version" "secret" {
   lifecycle {
     ignore_changes = [
@@ -259,15 +271,5 @@ resource "aws_secretsmanager_secret_version" "secret" {
     ]
   }
   secret_id     = "${aws_secretsmanager_secret.secret.id}"
-  secret_string = <<EOF
-{
-  "username": "${var.postgres_username}",
-  "engine": "postgres",
-  "dbname": "${var.postgres_dbname}",
-  "host": "${var.postgres_host}",
-  "password": "${var.postgres_password}",
-  "port": ${var.postgres_port},
-  "dbInstanceIdentifier": "${var.postgres_dbInstanceIdentifier}"
-}
-EOF
+  secret_string = "${jsonencode(local.secret_string)}"
 }
