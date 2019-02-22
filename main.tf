@@ -258,6 +258,7 @@ locals {
     engine = "postgres"
     dbname = "${var.postgres_dbname}"
     host = "${var.postgres_host}"
+    readHost = "${var.postgres_read_host}"
     password = "${var.postgres_password}"
     port = "${var.postgres_port}"
     dbInstanceIdentifier = "${var.postgres_dbInstanceIdentifier}"
@@ -265,11 +266,6 @@ locals {
 }
 
 resource "aws_secretsmanager_secret_version" "secret" {
-  lifecycle {
-    ignore_changes = [
-      "secret_string"
-    ]
-  }
   secret_id     = "${aws_secretsmanager_secret.secret.id}"
   secret_string = "${jsonencode(local.secret_string)}"
 }
