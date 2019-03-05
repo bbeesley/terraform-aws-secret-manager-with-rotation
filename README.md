@@ -8,16 +8,17 @@ This module will create all the resources to store and rotate a PostgreSQL or Au
 # Usage Example
 ``` hcl
 module "secret-manager-with-rotation" {
-  source                     = "giuseppeborgese/secret-manager-with-rotation/aws"
-  version                    = "<always choose the latest version displayed in the upper right corner of this page>"
-  name                       = "PassRotation"
-  rotation_days              = 10
-  subnets_lambda             = ["subnet-xxxxxx", "subnet-xxxxxx"] # or [] for no vpc
-  postgres_username             = "giuseppe"
-  postgres_dbname               = "my_db_name"
-  postgres_host                 =  "postgresEndpointurl.xxxxxx.us-east-1.rds.amazonaws.com"
-  postgres_password             = "dummy_password_will_we_rotated"
-  postgres_dbInstanceIdentifier = "my_rds_db_identifier"
+  source                        = "git::https://github.com/bbeesley/terraform-aws-secret-manager-with-rotation.git?ref=2.0.0"
+  name                          = "postgres-secret-test"
+  rotation_days                 = 1
+  subnets_lambda                = [] # dont pass any subnets if your db is public
+  postgres_username             = "postgres"
+  postgres_dbname               = "test"
+  postgres_host                 = "${module.rds-cluster.endpoint}"
+  postgres_read_host            = "${module.rds-cluster.reader_endpoint}"
+  postgres_password             = "changeme"
+  postgres_dbInstanceIdentifier = "postgres-db-test"
+  tags                          = "${local.tags}"
 }
 ```
 
