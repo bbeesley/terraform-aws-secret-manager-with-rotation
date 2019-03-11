@@ -7,7 +7,7 @@ data "aws_subnet" "firstsub" {
 }
 
 resource "aws_iam_role" "lambda_rotation" {
-  name = "${var.name}-rotation_lambda"
+  name = "${var.name}-rotation_lambda-${data.aws_region.current.name}"
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -26,7 +26,7 @@ EOF
 }
 
 resource "aws_iam_policy_attachment" "lambdabasic" {
-  name       = "${var.name}-lambdabasic"
+  name       = "${var.name}-lambdabasic-${data.aws_region.current.name}"
   roles      = ["${aws_iam_role.lambda_rotation.name}"]
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
@@ -59,14 +59,14 @@ data "aws_iam_policy_document" "SecretsManagerRDSPostgreSQLRotationSingleUserRol
 }
 
 resource "aws_iam_policy" "SecretsManagerRDSPostgreSQLRotationSingleUserRolePolicy" {
-  name   = "${var.name}-SecretsManagerRDSPostgreSQLRotationSingleUserRolePolicy"
+  name   = "${var.name}-${data.aws_region.current.name}-SecretsManagerRDSPostgreSQLRotationSingleUserRolePolicy"
   path   = "/"
   policy = "${data.aws_iam_policy_document.SecretsManagerRDSPostgreSQLRotationSingleUserRolePolicy.json}"
 }
 
 
 resource "aws_iam_policy_attachment" "SecretsManagerRDSPostgreSQLRotationSingleUserRolePolicy" {
-  name       = "${var.name}-SecretsManagerRDSPostgreSQLRotationSingleUserRolePolicy"
+  name       = "${var.name}-${data.aws_region.current.name}-SecretsManagerRDSPostgreSQLRotationSingleUserRolePolicy"
   roles      = ["${aws_iam_role.lambda_rotation.name}"]
   policy_arn = "${aws_iam_policy.SecretsManagerRDSPostgreSQLRotationSingleUserRolePolicy.arn}"
 }
