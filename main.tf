@@ -28,7 +28,6 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "lambdabasic" {
-  name       = "${var.name}-lambdabasic-${data.aws_region.current.name}"
   role       = "${aws_iam_role.lambda_rotation.name}"
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
