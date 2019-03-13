@@ -9,6 +9,7 @@ data "aws_subnet" "firstsub" {
 
 resource "aws_iam_role" "lambda_rotation" {
   name = "${var.name}-rotation_lambda-${data.aws_region.current.name}"
+  tags = "${var.tags}"
 
   assume_role_policy = <<EOF
 {
@@ -80,9 +81,7 @@ resource "aws_security_group" "lambda" {
   vpc_id = "${data.aws_subnet.firstsub.vpc_id}"
   name   = "${var.name}-Lambda-SecretManager"
 
-  tags {
-    Name = "${var.name}-Lambda-SecretManager"
-  }
+  tags = "${var.tags}"
 
   egress {
     from_port   = 0
@@ -185,6 +184,7 @@ data "aws_iam_policy_document" "kms" {
 resource "aws_kms_key" "secret" {
   description         = "Key for secret ${var.name}"
   enable_key_rotation = true
+  tags                = "${var.tags}"
 
   #policy              = "${data.aws_iam_policy_document.kms.json}"
   policy = <<POLICY
@@ -255,13 +255,11 @@ resource "aws_secretsmanager_secret" "secret" {
   kms_key_id          = "${aws_kms_key.secret.key_id}"
   name                = "${var.name}"
   rotation_lambda_arn = "${aws_lambda_function.rotate-code-postgres.arn}"
+  tags                = "${var.tags}"
 
   rotation_rules {
     automatically_after_days = "${var.rotation_days}"
   }
-
-  #tags                = "${var.tags}"
-  #policy =
 }
 
 locals {
